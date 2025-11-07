@@ -72,3 +72,10 @@ ingredients_list <- cocktails_clean %>%
   arrange(ingredients)  
 view(ingredients_list)
 ```
+
+## 4. Number of unique ingredients
+```{r}
+num_unique_ingredients <- ingredients_list %>%
+  nrow()
+num_unique_ingredients
+```
