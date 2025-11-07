@@ -79,3 +79,51 @@ num_unique_ingredients <- ingredients_list %>%
   nrow()
 num_unique_ingredients
 ```
+## 5. What are the top 10 ingredients?
+```{r}
+top_ingredients <- cocktails_clean %>%
+  count(ingredients, sort = TRUE) %>% 
+  slice_max(n, n = 10, with_ties = TRUE)
+top_ingredients
+```
+## 2. step correction
+```{r}
+cocktails_clean <- cocktails %>%
+  mutate(ingredients = str_remove_all(ingredients, "\\b[0-9]+\\s?[a-zA-Z/%]+\\b")) %>%  # mennyiségek törlése
+  mutate(ingredients = str_remove_all(ingredients, "[0-9]+\\.?[0-9]*%\\s*abv")) %>%      # % abv törlése
+  mutate(ingredients = str_replace_all(ingredients, "<br/?>", ",")) %>%                  # HTML sortörés cseréje vesszőre
+  separate_rows(ingredients, sep = ",") %>%                                              # minden hozzávaló külön sorba
+  mutate(ingredients = str_trim(ingredients)) %>%                                        # felesleges szóközök eltávolítása
+  filter(ingredients != "")        
+```
+## 5. What are the top 10 ingredients? again
+```{r}
+top_ingredients <- cocktails_clean %>%
+  count(ingredients, sort = TRUE) %>% 
+  slice_max(n, n = 10, with_ties = TRUE)
+top_ingredients
+```
+## 2. Correction further
+```{r}
+cocktails_clean <- cocktails_clean %>%
+  mutate(
+    ingredients = str_remove_all(ingredients, "\\(.*?\\)"),  
+    ingredients = str_remove_all(ingredients, "^[0-9]+\\s*"), 
+    ingredients = str_squish(ingredients)             
+  )
+```
+
+## 5. Again
+```{r}
+top_ingredients <- cocktails_clean %>%
+  count(ingredients, sort = TRUE) %>% 
+  slice_max(n, n = 10, with_ties = TRUE)
+top_ingredients
+```
+## 3. All ingredients in alphabetical order - again
+```{r}
+ingredients_list <- cocktails_clean %>%
+  distinct(ingredients) %>%    
+  arrange(ingredients)  
+view(ingredients_list)
+```
