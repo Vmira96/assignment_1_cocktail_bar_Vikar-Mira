@@ -127,3 +127,59 @@ ingredients_list <- cocktails_clean %>%
   arrange(ingredients)  
 view(ingredients_list)
 ```
+
+## 2. again
+```{r}
+clean_cocktails <- cocktails %>%
+  separate_rows(ingredients, sep = "<br/>") %>%
+  mutate(ingredients = str_remove_all(ingredients, "\\b[0-9]+\\s?(oz|dash|dashes|ml|cl|tsp|tbsp|cup|part|barspoon)s?\\b")) %>%
+  mutate(ingredients = str_remove_all(ingredients, "[0-9]+\\.?[0-9]*%\\s*abv")) %>%
+  mutate(ingredients = str_remove(ingredients, "^\\s*\\d+\\.?\\s*")) %>%  # 
+  mutate(ingredients = str_trim(ingredients)) %>%
+  filter(ingredients != "")
+```
+## 3. All ingredients in alphabetical order - again
+```{r}
+ingredients_list <- cocktails_clean %>%
+  distinct(ingredients) %>%    
+  arrange(ingredients)  
+view(ingredients_list)
+```
+
+## 2. again in smaller steps
+```{r}
+library(stringr)
+library(dplyr)
+library(tidyr)
+
+cocktails_clean <- cocktails %>%
+  # 1) Normalising line breaks
+  mutate(ingredients = str_replace_all(ingredients, "<br\\s*/?>", "\n"),
+         ingredients = str_replace_all(ingredients, "\r", "")) %>%
+
+  # 2) Delete the separate number lines
+  mutate(ingredients = str_replace_all(ingredients, "\\n\\s*\\d+\\s*\\n", "\n")) %>%
+
+  # 3) We remove numbering and bullet points
+  mutate(ingredients = str_replace_all(ingredients, "(^|\\n)\\s*\\.?\\s*\\d+\\s*\\.?\\s*", "\n"),
+         ingredients = str_replace_all(ingredients, "(^|\\n)\\s*\\.\\s+", "\n")) %>%
+
+  # 4) Deleting parentheses, percentages, and units of measurement
+  mutate(ingredients = str_remove_all(ingredients, "\\(.*?\\)"),
+         ingredients = str_remove_all(ingredients, "[0-9]+\\.?[0-9]*%\\s*abv"),
+         ingredients = str_remove_all(ingredients, "\\b[0-9]+\\s*(oz|ml|cl|tsp|tbsp|cup|part|dash(?:es)?|barspoon)s?\\b"),
+         ingredients = str_replace_all(ingredients, "[/\\\\]+", "/")) %>%
+
+  # 5) Breakdown into new rows
+  separate_rows(ingredients, sep = "[,\\n]") %>%
+
+  # 6) Filtering out unnecessary elements
+  mutate(ingredients = str_squish(ingredients),
+         ingredients = str_trim(ingredients)) %>%
+  filter(ingredients != "",
+         !str_detect(ingredients, "^[\\d\\.\\s]+$"),
+         !str_detect(ingredients, "^\\.$"))
+
+# Check
+cocktails_clean %>% distinct(ingredients) %>% slice_head(n = 50) %>% print(n = 50)
+```
