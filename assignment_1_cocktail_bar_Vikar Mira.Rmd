@@ -65,3 +65,10 @@ cocktails_clean <- cocktails %>%
   mutate(ingredients = str_squish(ingredients))
 head(cocktails_clean)
 ```
+## 3. All ingredients in alphabetical order
+```{r}
+ingredients_list <- cocktails_clean %>%
+  distinct(ingredients) %>%    
+  arrange(ingredients)  
+view(ingredients_list)
+```
