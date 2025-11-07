@@ -183,3 +183,82 @@ cocktails_clean <- cocktails %>%
 # Check
 cocktails_clean %>% distinct(ingredients) %>% slice_head(n = 50) %>% print(n = 50)
 ```
+## 2. Robust cleaning
+# Robust cleaning pipeline (futtasd egyetlen chunkban)
+```{r}
+library(dplyr); library(stringr); library(tidyr)
+
+cocktails_clean <- cocktails %>%
+  # 0) munkamásolat
+  mutate(ingredients = as.character(ingredients)) %>%
+
+  # 1) HTML tagek és HTML sortörések -> vessző (egységesítés)
+  mutate(ingredients = str_replace_all(ingredients, "<br\\s*/?>", ",")) %>%
+  mutate(ingredients = str_replace_all(ingredients, "<[^>]+>", ",")) %>%
+
+  # 2) Unicode szemetek normalizálása / eltávolítása
+  mutate(ingredients = str_replace_all(ingredients, "\\\\u[0-9a-fA-F]{4}", " "),
+         ingredients = str_replace_all(ingredients, "[^\\x00-\\x7F]", " ")) %>%    
+
+  # 3) Slash-szerű elválasztókat (amik nem törtvonalak) egységesítjük vesszőre
+  #    De előtte eltávolítjuk törtmennyiségeket (pl. 1/2) hogy ne törjük fel őket feleslegesen.
+  mutate(ingredients = str_replace_all(ingredients, "\\b\\d+\\s*/\\s*\\d+\\b", " ")) %>%
+  mutate(ingredients = str_replace_all(ingredients, "[/\\\\]+", ",")) %>%
+
+  # 4) Számozás / pont a sor elején vagy külön sorban: "1.", "2", ". lemon" stb. -> eltávolítjuk
+  mutate(ingredients = str_replace_all(ingredients, "(^|,|\\n)\\s*\\.?\\s*\\d+\\s*\\.?\\s*(,|$)", ",")) %>%
+
+  # 5) Zárójelek és tartalmuk, %abv, mértékegységek eltávolítása
+  mutate(ingredients = str_remove_all(ingredients, "\\([^\\)]*\\)"),                     # ( ... )
+         ingredients = str_remove_all(ingredients, "[0-9]+\\.?[0-9]*%\\s*abv"),          # 47% abv
+         ingredients = str_remove_all(ingredients, "\\b\\d+\\s*(oz|ml|cl|tsp|tbsp|bsp|cup|part|dash(?:es)?|barspoon|drop(?:s)?)s?\\b"), 
+         ingredients = str_remove_all(ingredients, "\\b\\d+\\b")) %>%                  
+  
+  # 6) Felbontás vesszők és új sorok mentén
+  separate_rows(ingredients, sep = "[,\\n;]") %>%
+
+  # 7) Levágás, több szóköz eltávolítása, kis lettersé alakítás (opcionális)
+  mutate(ingredients = str_squish(ingredients),
+         ingredients = str_trim(ingredients),
+         ingredients = str_to_lower(ingredients)) %>%
+
+  # 8) Eltávolítjuk a maradék "szemetet" - csak számok/pontok vagy nagyon rövid/értelmetlen elemek
+  filter(ingredients != "",
+         !str_detect(ingredients, "^[\\d\\.\\s]+$"),
+         nchar(ingredients) > 1,
+         !str_detect(ingredients, "^\\W+$")) %>%
+
+  # 9) Normáljuk az elnevezéseket (opcionális: pl. 'lemon juice' <-> 'lemon juice' már jó)
+  mutate(ingredients = str_replace_all(ingredients,
+                                      c("^lemon\\s*juice$" = "lemon juice",
+                                        "^lime\\s*juice$"  = "lime juice"))) %>%
+
+  # 10) opcionális: ismét összeszedjük a distinct neveket
+  distinct(name, ingredients, .keep_all = TRUE)
+
+# Ellenőrzés: nézzük a furcsa elemeket, amik még vezető perjellel vagy számokkal kezdődnek
+cocktails_clean %>% filter(str_detect(ingredients, "^[^a-z0-9]")) %>% distinct(ingredients) %>% print(n = 100)
+
+```
+## 2. cleaning further
+```{r}
+cocktails_clean <- cocktails_clean %>%
+  mutate(ingredients = str_replace_all(ingredients, "(^|,)\\s*\\d+\\s*\\.\\s*", ",")) %>%
+  mutate(ingredients = str_squish(ingredients)) %>%
+  mutate(
+    ingredients = str_remove(ingredients, "^\\d+\\s*"),
+    ingredients = str_remove(ingredients, "^\\.*\\s*")
+  )
+
+cocktails_clean %>%
+  filter(str_detect(ingredients, "^\\d")) %>%
+  distinct(ingredients)
+```
+## 3. All ingredients in alphabetical order - again
+```{r}
+ingredients_list <- cocktails_clean %>%
+  distinct(ingredients) %>%     
+  arrange(ingredients)          
+
+ingredients_list
+```
