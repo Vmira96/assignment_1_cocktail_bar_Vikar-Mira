@@ -249,11 +249,19 @@ cocktails_clean <- cocktails_clean %>%
     ingredients = str_remove(ingredients, "^\\d+\\s*"),
     ingredients = str_remove(ingredients, "^\\.*\\s*")
   )
+  mutate(
+    ingredients = str_remove_all(
+      ingredients,
+      "\\b(oz|ml|cl|tsp|tbsp|bsp|cup|part|dash(?:es)?|barspoon|drop(?:s)?)\\b"
+   ),
+    ingredients = str_squish(ingredients)
+  ) %>%
+  filter(ingredients != "")
 
 cocktails_clean %>%
   filter(str_detect(ingredients, "^\\d")) %>%
   distinct(ingredients)
-```
+  ```
 ## 3. All ingredients in alphabetical order - again
 ```{r}
 ingredients_list <- cocktails_clean %>%
@@ -261,4 +269,32 @@ ingredients_list <- cocktails_clean %>%
   arrange(ingredients)          
 
 ingredients_list
+```
+# --- Végső tisztítás az 'oz' és hasonló mértékegységek eltávolítására ---
+```{r}
+library(dplyr)
+library(stringr)
+
+cocktails_clean <- cocktails_clean %>%
+  mutate(
+    ingredients = str_remove_all(
+      ingredients,
+      "\\boz\\b|\\bml\\b|\\bcl\\b|\\btsp\\b|\\btbsp\\b|\\bbsp\\b|\\bcup\\b|\\bpart\\b|\\bdash(?:es)?\\b|\\bbarspoon\\b|\\bdrops?\\b"
+    ),
+    ingredients = str_squish(ingredients),      # szóközök rendbetétele
+    ingredients = str_trim(ingredients)         # levágás az elejéről és végéről
+  ) %>%
+  filter(ingredients != "")                     # üres sorok kidobása
+
+# Ellenőrzés: van-e még 'oz' az ingredients oszlopban?
+cocktails_clean %>%
+  filter(str_detect(ingredients, "\\boz\\b")) %>%
+  distinct(ingredients)
+```
+## 3. All ingredients in alphabetical order - again 2
+```{r}
+ingredients_list <- cocktails_clean %>%
+  distinct(ingredients) %>%    
+  arrange(ingredients)  
+View(ingredients_list)
 ```
