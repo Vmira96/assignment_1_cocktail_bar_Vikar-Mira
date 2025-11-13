@@ -306,3 +306,13 @@ unique_ingredients_count <- cocktails_clean %>%
 
 unique_ingredients_count
 ```
+# 5. Top 10 most frequent ingredients
+```{r}
+top_ingredients <- cocktails_clean %>%
+  count(ingredients, sort = TRUE) %>%   
+  filter(n >= 10 | row_number() <= 10)  
+
+top_ingredients
+```
+
+
