@@ -60,54 +60,32 @@ cocktails <- read_tsv("https://raw.githubusercontent.com/nthun/cocktail-balance/
 library(dplyr); library(stringr); library(tidyr)
 
 cocktails_clean <- cocktails %>%
-  # 0) munkamásolat
   mutate(ingredients = as.character(ingredients)) %>%
-
-  # 1) HTML tagek és HTML sortörések -> vessző (egységesítés)
   mutate(ingredients = str_replace_all(ingredients, "<br\\s*/?>", ",")) %>%
   mutate(ingredients = str_replace_all(ingredients, "<[^>]+>", ",")) %>%
-
-  # 2) Unicode szemetek normalizálása / eltávolítása
   mutate(ingredients = str_replace_all(ingredients, "\\\\u[0-9a-fA-F]{4}", " "),
          ingredients = str_replace_all(ingredients, "[^\\x00-\\x7F]", " ")) %>%    
-
-  # 3) Slash-szerű elválasztókat (amik nem törtvonalak) egységesítjük vesszőre
-  #    De előtte eltávolítjuk törtmennyiségeket (pl. 1/2) hogy ne törjük fel őket feleslegesen.
   mutate(ingredients = str_replace_all(ingredients, "\\b\\d+\\s*/\\s*\\d+\\b", " ")) %>%
   mutate(ingredients = str_replace_all(ingredients, "[/\\\\]+", ",")) %>%
-
-  # 4) Számozás / pont a sor elején vagy külön sorban: "1.", "2", ". lemon" stb. -> eltávolítjuk
   mutate(ingredients = str_replace_all(ingredients, "(^|,|\\n)\\s*\\.?\\s*\\d+\\s*\\.?\\s*(,|$)", ",")) %>%
-
-  # 5) Zárójelek és tartalmuk, %abv, mértékegységek eltávolítása
   mutate(ingredients = str_remove_all(ingredients, "\\([^\\)]*\\)"),                     # ( ... )
          ingredients = str_remove_all(ingredients, "[0-9]+\\.?[0-9]*%\\s*abv"),          # 47% abv
          ingredients = str_remove_all(ingredients, "\\b\\d+\\s*(oz|ml|cl|tsp|tbsp|bsp|cup|part|dash(?:es)?|barspoon|drop(?:s)?)s?\\b"), 
          ingredients = str_remove_all(ingredients, "\\b\\d+\\b")) %>%                  
-  
-  # 6) Felbontás vesszők és új sorok mentén
   separate_rows(ingredients, sep = "[,\\n;]") %>%
-
-  # 7) Levágás, több szóköz eltávolítása, kis lettersé alakítás (opcionális)
   mutate(ingredients = str_squish(ingredients),
          ingredients = str_trim(ingredients),
          ingredients = str_to_lower(ingredients)) %>%
-
-  # 8) Eltávolítjuk a maradék "szemetet" - csak számok/pontok vagy nagyon rövid/értelmetlen elemek
   filter(ingredients != "",
          !str_detect(ingredients, "^[\\d\\.\\s]+$"),
          nchar(ingredients) > 1,
          !str_detect(ingredients, "^\\W+$")) %>%
-
-  # 9) Normáljuk az elnevezéseket (opcionális: pl. 'lemon juice' <-> 'lemon juice' már jó)
   mutate(ingredients = str_replace_all(ingredients,
                                       c("^lemon\\s*juice$" = "lemon juice",
                                         "^lime\\s*juice$"  = "lime juice"))) %>%
-
-  # 10) opcionális: ismét összeszedjük a distinct neveket
   distinct(name, ingredients, .keep_all = TRUE)
 
-# Ellenőrzés: nézzük a furcsa elemeket, amik még vezető perjellel vagy számokkal kezdődnek
+#Checking data cleaning
 cocktails_clean %>% filter(str_detect(ingredients, "^[^a-z0-9]")) %>% distinct(ingredients) %>% print(n = 100)
 
 ```
@@ -129,19 +107,13 @@ cocktails_clean <- cocktails_clean %>%
   ) %>%
   filter(ingredients != "")
 
+  #Checking data cleaning
 cocktails_clean %>%
   filter(str_detect(ingredients, "^\\d")) %>%
   distinct(ingredients)
-  ```
-## 3. All ingredients in alphabetical order - again
-```{r}
-ingredients_list <- cocktails_clean %>%
-  distinct(ingredients) %>%     
-  arrange(ingredients)          
-
-ingredients_list
 ```
-# --- Végső tisztítás 'oz' és hasonló mértékegységek eltávolítására ---
+
+# 2. Final cleaning
 ```{r}
 library(dplyr)
 library(stringr)
@@ -157,12 +129,12 @@ cocktails_clean <- cocktails_clean %>%
   ) %>%
   filter(ingredients != "")                     
 
-# Ellenőrzés: van-e még 'oz' az ingredients oszlopban?
+#Checking data cleaning
 cocktails_clean %>%
   filter(str_detect(ingredients, "\\boz\\b")) %>%
   distinct(ingredients)
 ```
-## 3. All ingredients in alphabetical order - again 2
+## 3. All ingredients in alphabetical order
 ```{r}
 ingredients_list <- cocktails_clean %>%
   distinct(ingredients) %>%    
@@ -186,24 +158,23 @@ top_ingredients <- cocktails_clean %>%
 top_ingredients
 ```
 # 6. Which cocktail(s) has/have the most ingredients?
-# Count the number of ingredients and filter all the cocktails that has that many.
 ```{r}
-# Első lépés: megszámoljuk minden koktél összetevőinek számát
+# Step one: count the number of ingredients in each cocktail
 cocktail_ingredient_count <- cocktails_clean %>%
   group_by(name) %>%
   summarise(ingredient_count = n(), .groups = 'drop')
 
-# Második lépés: megkeressük a maximális összetevőszámot
+# Step 2: Find the maximum number of ingredients
 max_ingredients <- max(cocktail_ingredient_count$ingredient_count)
 
-# Harmadik lépés: szűrjük azokat a koktélokat, amelyeknek ennyi összetevőjük van
+# Step three: filter out cocktails that have this many ingredients
 cocktails_with_most_ingredients <- cocktail_ingredient_count %>%
   filter(ingredient_count == max_ingredients)
 
-# Eredmény megjelenítése
+# Displaying results
 cocktails_with_most_ingredients
 
-# Az összetevők részletesen:
+# Ingredients in detail
 detailed_result <- cocktails_clean %>%
   filter(name %in% cocktails_with_most_ingredients$name)
 
@@ -212,41 +183,40 @@ detailed_result
 
 ## 7. How many ingredients appear in only one cocktail (rare ingredient)?
 ```{r}
-# 1. Számoljuk meg, hányszor szerepel minden ingredient
+# 1. Counting the times each ingredient appears
 ingredient_counts <- table(cocktails_clean$ingredients)
 
-# 2. Szűrjük ki azokat, amelyek csak egyszer szerepelnek
+# 2. Filter out those that appear only once
 rare_ingredients <- ingredient_counts[ingredient_counts == 1]
 
-# 3. Hány ilyen ritka ingredient van
+#3. How many rare ingredients are there?
 num_rare_ingredients <- length(rare_ingredients)
 
-# Eredmény kiírása
+# Result
 num_rare_ingredients
 ```
 ## 8. Which cocktail has an ingredient that is only used in one cocktail?
 ```{r}
-# 1. Ritka összetevők sorravétele
+# 1. Rare ingredients
 rare_ingredient_names <- names(rare_ingredients)
 
-# 2. Ezen összetevőket tartalmazó koktélok sorra vétele
+# 2. Coctails with rare ingredients
 cocktails_with_rare_ingredients <- cocktails_clean %>%
   filter(ingredients %in% rare_ingredient_names) %>%
   distinct(name, ingredients) %>%  # csak a koktél és az összetevő
   arrange(name)
 
-# 3. Eredmény megtekintése
+# 3. Result
 cocktails_with_rare_ingredients
 ```
 ## 9. What are the cocktails without rare ingredients?
 ```{r}
-# 1. Szűrjük az összes koktélt, ahol az összetevő NEM ritka
 cocktails_without_rare_ingredients <- cocktails_clean %>%
   filter(!ingredients %in% rare_ingredient_names) %>%
-  distinct(name) %>%   # csak a koktél neve
+  distinct(name) %>%   
   arrange(name)
 
-# 2. Eredmény megtekintése
+# Result
 cocktails_without_rare_ingredients
 ```
 ## 10. Create a cheat sheet for the bartender!
@@ -254,7 +224,7 @@ cocktails_without_rare_ingredients
 library(tidyr)
 library(dplyr)
 
-# 1. Hozzuk létre a cheat sheet mátrixot
+# 1. Create the cheat sheet matrix
 cheat_sheet <- cocktails_clean %>%
   mutate(value = "X") %>%  
   pivot_wider(
@@ -264,6 +234,6 @@ cheat_sheet <- cocktails_clean %>%
   ) %>%
   arrange(name)                
 
-# 2. Nézzük meg az eredményt
+# 2. Result
 cheat_sheet
 ```
