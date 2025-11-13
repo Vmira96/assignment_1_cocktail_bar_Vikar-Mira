@@ -54,137 +54,8 @@ cocktails <- read_csv("https://raw.githubusercontent.com/mira-vikar/data-public/
 ```{r}
 cocktails <- read_tsv("https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv")
 ```
-## 2. Transform the data table and clean the ingredient variable
-```{r}
-colnames(cocktails)
-cocktails_clean <- cocktails %>%
-  separate_rows(ingredients, sep = ",") %>% 
-  mutate(ingredients = str_trim(ingredients)) %>%
-  mutate(ingredients = str_remove_all(ingredients, "\\b[0-9]+\\s?[a-zA-Z/%]+\\b")) %>%
-  mutate(ingredients = str_remove_all(ingredients, "[0-9]+\\.?[0-9]*%\\s*abv")) %>%
-  mutate(ingredients = str_squish(ingredients))
-head(cocktails_clean)
-```
-## 3. All ingredients in alphabetical order
-```{r}
-ingredients_list <- cocktails_clean %>%
-  distinct(ingredients) %>%    
-  arrange(ingredients)  
-view(ingredients_list)
-```
 
-## 4. Number of unique ingredients
-```{r}
-num_unique_ingredients <- ingredients_list %>%
-  nrow()
-num_unique_ingredients
-```
-## 5. What are the top 10 ingredients?
-```{r}
-top_ingredients <- cocktails_clean %>%
-  count(ingredients, sort = TRUE) %>% 
-  slice_max(n, n = 10, with_ties = TRUE)
-top_ingredients
-```
-## 2. step correction
-```{r}
-cocktails_clean <- cocktails %>%
-  mutate(ingredients = str_remove_all(ingredients, "\\b[0-9]+\\s?[a-zA-Z/%]+\\b")) %>%  # mennyiségek törlése
-  mutate(ingredients = str_remove_all(ingredients, "[0-9]+\\.?[0-9]*%\\s*abv")) %>%      # % abv törlése
-  mutate(ingredients = str_replace_all(ingredients, "<br/?>", ",")) %>%                  # HTML sortörés cseréje vesszőre
-  separate_rows(ingredients, sep = ",") %>%                                              # minden hozzávaló külön sorba
-  mutate(ingredients = str_trim(ingredients)) %>%                                        # felesleges szóközök eltávolítása
-  filter(ingredients != "")        
-```
-## 5. What are the top 10 ingredients? again
-```{r}
-top_ingredients <- cocktails_clean %>%
-  count(ingredients, sort = TRUE) %>% 
-  slice_max(n, n = 10, with_ties = TRUE)
-top_ingredients
-```
-## 2. Correction further
-```{r}
-cocktails_clean <- cocktails_clean %>%
-  mutate(
-    ingredients = str_remove_all(ingredients, "\\(.*?\\)"),  
-    ingredients = str_remove_all(ingredients, "^[0-9]+\\s*"), 
-    ingredients = str_squish(ingredients)             
-  )
-```
-
-## 5. Again
-```{r}
-top_ingredients <- cocktails_clean %>%
-  count(ingredients, sort = TRUE) %>% 
-  slice_max(n, n = 10, with_ties = TRUE)
-top_ingredients
-```
-## 3. All ingredients in alphabetical order - again
-```{r}
-ingredients_list <- cocktails_clean %>%
-  distinct(ingredients) %>%    
-  arrange(ingredients)  
-view(ingredients_list)
-```
-
-## 2. again
-```{r}
-clean_cocktails <- cocktails %>%
-  separate_rows(ingredients, sep = "<br/>") %>%
-  mutate(ingredients = str_remove_all(ingredients, "\\b[0-9]+\\s?(oz|dash|dashes|ml|cl|tsp|tbsp|cup|part|barspoon)s?\\b")) %>%
-  mutate(ingredients = str_remove_all(ingredients, "[0-9]+\\.?[0-9]*%\\s*abv")) %>%
-  mutate(ingredients = str_remove(ingredients, "^\\s*\\d+\\.?\\s*")) %>%  # 
-  mutate(ingredients = str_trim(ingredients)) %>%
-  filter(ingredients != "")
-```
-## 3. All ingredients in alphabetical order - again
-```{r}
-ingredients_list <- cocktails_clean %>%
-  distinct(ingredients) %>%    
-  arrange(ingredients)  
-view(ingredients_list)
-```
-
-## 2. again in smaller steps
-```{r}
-library(stringr)
-library(dplyr)
-library(tidyr)
-
-cocktails_clean <- cocktails %>%
-  # 1) Normalising line breaks
-  mutate(ingredients = str_replace_all(ingredients, "<br\\s*/?>", "\n"),
-         ingredients = str_replace_all(ingredients, "\r", "")) %>%
-
-  # 2) Delete the separate number lines
-  mutate(ingredients = str_replace_all(ingredients, "\\n\\s*\\d+\\s*\\n", "\n")) %>%
-
-  # 3) We remove numbering and bullet points
-  mutate(ingredients = str_replace_all(ingredients, "(^|\\n)\\s*\\.?\\s*\\d+\\s*\\.?\\s*", "\n"),
-         ingredients = str_replace_all(ingredients, "(^|\\n)\\s*\\.\\s+", "\n")) %>%
-
-  # 4) Deleting parentheses, percentages, and units of measurement
-  mutate(ingredients = str_remove_all(ingredients, "\\(.*?\\)"),
-         ingredients = str_remove_all(ingredients, "[0-9]+\\.?[0-9]*%\\s*abv"),
-         ingredients = str_remove_all(ingredients, "\\b[0-9]+\\s*(oz|ml|cl|tsp|tbsp|cup|part|dash(?:es)?|barspoon)s?\\b"),
-         ingredients = str_replace_all(ingredients, "[/\\\\]+", "/")) %>%
-
-  # 5) Breakdown into new rows
-  separate_rows(ingredients, sep = "[,\\n]") %>%
-
-  # 6) Filtering out unnecessary elements
-  mutate(ingredients = str_squish(ingredients),
-         ingredients = str_trim(ingredients)) %>%
-  filter(ingredients != "",
-         !str_detect(ingredients, "^[\\d\\.\\s]+$"),
-         !str_detect(ingredients, "^\\.$"))
-
-# Check
-cocktails_clean %>% distinct(ingredients) %>% slice_head(n = 50) %>% print(n = 50)
-```
-## 2. Robust cleaning
-# Robust cleaning pipeline (futtasd egyetlen chunkban)
+## 2. Transform the data table and clean the ingredient variable!
 ```{r}
 library(dplyr); library(stringr); library(tidyr)
 
@@ -270,7 +141,7 @@ ingredients_list <- cocktails_clean %>%
 
 ingredients_list
 ```
-# --- Végső tisztítás az 'oz' és hasonló mértékegységek eltávolítására ---
+# --- Végső tisztítás 'oz' és hasonló mértékegységek eltávolítására ---
 ```{r}
 library(dplyr)
 library(stringr)
@@ -281,10 +152,10 @@ cocktails_clean <- cocktails_clean %>%
       ingredients,
       "\\boz\\b|\\bml\\b|\\bcl\\b|\\btsp\\b|\\btbsp\\b|\\bbsp\\b|\\bcup\\b|\\bpart\\b|\\bdash(?:es)?\\b|\\bbarspoon\\b|\\bdrops?\\b"
     ),
-    ingredients = str_squish(ingredients),      # szóközök rendbetétele
-    ingredients = str_trim(ingredients)         # levágás az elejéről és végéről
+    ingredients = str_squish(ingredients),      
+    ingredients = str_trim(ingredients)        
   ) %>%
-  filter(ingredients != "")                     # üres sorok kidobása
+  filter(ingredients != "")                     
 
 # Ellenőrzés: van-e még 'oz' az ingredients oszlopban?
 cocktails_clean %>%
@@ -338,23 +209,7 @@ detailed_result <- cocktails_clean %>%
 
 detailed_result
 ```
-## 7. How many ingredients appear in only one cocktail (rare ingredient)?
-```{r}
-# 1. Számoljuk meg, hányszor szerepel minden ingredient
-ingredient_counts <- table(df$ingredient)
 
-# 2. Szűrjük ki azokat, amelyek csak egyszer szerepelnek
-rare_ingredients <- ingredient_counts[ingredient_counts == 1]
-
-# 3. Hány ilyen ritka ingredient van
-num_rare_ingredients <- length(rare_ingredients)
-
-# Eredmény kiírása
-print(num_rare_ingredients)
-```
-```{r}
-names(df)
-```
 ## 7. How many ingredients appear in only one cocktail (rare ingredient)?
 ```{r}
 # 1. Számoljuk meg, hányszor szerepel minden ingredient
@@ -383,7 +238,7 @@ cocktails_with_rare_ingredients <- cocktails_clean %>%
 # 3. Eredmény megtekintése
 cocktails_with_rare_ingredients
 ```
-
+## 9. What are the cocktails without rare ingredients?
 ```{r}
 # 1. Szűrjük az összes koktélt, ahol az összetevő NEM ritka
 cocktails_without_rare_ingredients <- cocktails_clean %>%
