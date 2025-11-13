@@ -159,22 +159,22 @@ top_ingredients
 ```
 # 6. Which cocktail(s) has/have the most ingredients?
 ```{r}
-# Step one: count the number of ingredients in each cocktail
+# 1. Count the number of ingredients in each cocktail
 cocktail_ingredient_count <- cocktails_clean %>%
   group_by(name) %>%
   summarise(ingredient_count = n(), .groups = 'drop')
 
-# Step 2: Find the maximum number of ingredients
+# 2. Find the maximum number of ingredients
 max_ingredients <- max(cocktail_ingredient_count$ingredient_count)
 
-# Step three: filter out cocktails that have this many ingredients
+# 3. Filter out cocktails that have this many ingredients
 cocktails_with_most_ingredients <- cocktail_ingredient_count %>%
   filter(ingredient_count == max_ingredients)
 
-# Displaying results
+# .4. Displaying results
 cocktails_with_most_ingredients
 
-# Ingredients in detail
+# 5. Ingredients in detail
 detailed_result <- cocktails_clean %>%
   filter(name %in% cocktails_with_most_ingredients$name)
 
