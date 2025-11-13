@@ -338,4 +338,48 @@ detailed_result <- cocktails_clean %>%
 
 detailed_result
 ```
+## 7. How many ingredients appear in only one cocktail (rare ingredient)?
+```{r}
+# 1. Számoljuk meg, hányszor szerepel minden ingredient
+ingredient_counts <- table(df$ingredient)
 
+# 2. Szűrjük ki azokat, amelyek csak egyszer szerepelnek
+rare_ingredients <- ingredient_counts[ingredient_counts == 1]
+
+# 3. Hány ilyen ritka ingredient van
+num_rare_ingredients <- length(rare_ingredients)
+
+# Eredmény kiírása
+print(num_rare_ingredients)
+```
+```{r}
+names(df)
+```
+## 7. How many ingredients appear in only one cocktail (rare ingredient)?
+```{r}
+# 1. Számoljuk meg, hányszor szerepel minden ingredient
+ingredient_counts <- table(cocktails_clean$ingredients)
+
+# 2. Szűrjük ki azokat, amelyek csak egyszer szerepelnek
+rare_ingredients <- ingredient_counts[ingredient_counts == 1]
+
+# 3. Hány ilyen ritka ingredient van
+num_rare_ingredients <- length(rare_ingredients)
+
+# Eredmény kiírása
+num_rare_ingredients
+```
+## 8. Which cocktail has an ingredient that is only used in one cocktail?
+```{r}
+# 1. Ritka összetevők sorravétele
+rare_ingredient_names <- names(rare_ingredients)
+
+# 2. Ezen összetevőket tartalmazó koktélok sorra vétele
+cocktails_with_rare_ingredients <- cocktails_clean %>%
+  filter(ingredients %in% rare_ingredient_names) %>%
+  distinct(name, ingredients) %>%  # csak a koktél és az összetevő
+  arrange(name)
+
+# 3. Eredmény megtekintése
+cocktails_with_rare_ingredients
+```
